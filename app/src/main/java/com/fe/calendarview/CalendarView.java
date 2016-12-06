@@ -6,8 +6,11 @@ import android.content.res.TypedArray;
 import android.graphics.Color;
 import android.os.Build;
 import android.util.AttributeSet;
+import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,6 +55,16 @@ public class CalendarView extends LinearLayout {
      */
     private int mSelectedLineColor;
 
+    /**
+     *  选择的年, 月，日
+     */
+    private int mSelectYear, mSelectMonth, mSelectDay;
+
+    /**
+     *  时间linarlayout
+     */
+    private LinearLayout mLlDate;
+
     private OnDateSelectedListener mOnDateSelectedListener;
 
     public CalendarView(Context context) {
@@ -78,18 +91,51 @@ public class CalendarView extends LinearLayout {
 
 
     private void init(Context context, AttributeSet attrs) {
-        setOrientation(HORIZONTAL);
+        setOrientation(VERTICAL);
         initStyle(context, attrs);
+
+        /**
+         *  时间linearlayout布局
+         */
+        LinearLayout.LayoutParams dateLp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        mLlDate = new LinearLayout(context);
+        mLlDate.setOrientation(HORIZONTAL);
+        mLlDate.setLayoutParams(dateLp);
+        addView(mLlDate);
+
+        View divisionLineView = new View(context);
+        divisionLineView.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1));
+        divisionLineView.setBackgroundColor(mSelectedLineColor);
+        addView(divisionLineView);
+
+        /**
+         *  添加按钮布局
+         */
+        TextView tvSure = new TextView(context);
+        tvSure.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        tvSure.setGravity(Gravity.CENTER_HORIZONTAL);
+        tvSure.setTextSize(16);
+        tvSure.setPadding(0, 22, 0, 22);
+        tvSure.setText("确定");
+        addView(tvSure);
+        tvSure.setOnClickListener(new OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(mOnDateSelectedListener != null) {
+                    mOnDateSelectedListener.onDateSelected(mSelectYear, mSelectMonth, mSelectDay);
+                }
+            }
+        });
 
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, 800);
         mYearSpinnerView = new SpinnerView(context);
-        addViewData(mYearSpinnerView, lp, getYearList());
+        addViewData(mYearSpinnerView, lp, getYearList(), "年");
 
         mMonthSpinnerView = new SpinnerView(context);
-        addViewData(mMonthSpinnerView, lp, getMonthList());
+        addViewData(mMonthSpinnerView, lp, getMonthList(), "月");
 
         mDaySpinnerView = new SpinnerView(context);
-        addViewData(mDaySpinnerView, lp, getDayList(1));
+        addViewData(mDaySpinnerView, lp, getDayList(1), "日");
 
         setListener();
     }
@@ -99,7 +145,7 @@ public class CalendarView extends LinearLayout {
         mTextColor = typedArray.getColor(R.styleable.CalendarViewStyle_textColor, Color.parseColor("#999999"));
         mSelectedTextColor = typedArray.getColor(R.styleable.CalendarViewStyle_selectedTextColor, Color.parseColor("#3F51B5"));
         mSelectedLineColor = typedArray.getColor(R.styleable.CalendarViewStyle_selectedLineColor, Color.parseColor("#D6D6D6"));
-        mTextSize = typedArray.getDimensionPixelSize(R.styleable.CalendarViewStyle_selectedTextColor, 60);
+        mTextSize = typedArray.getDimensionPixelSize(R.styleable.CalendarViewStyle_selectedTextColor, 50);
         typedArray.recycle();
     }
 
@@ -111,10 +157,11 @@ public class CalendarView extends LinearLayout {
         spinnerView.invalidate();
     }
 
-    private void addViewData(SpinnerView spinnerView, LinearLayout.LayoutParams lp, List<String> dataList) {
+    private void addViewData(SpinnerView spinnerView, LinearLayout.LayoutParams lp, List<String> dataList, String unit) {
         spinnerView.setLayoutParams(lp);
-        addView(spinnerView);
+        mLlDate.addView(spinnerView);
         spinnerView.setAllDataList(dataList);
+        spinnerView.setUnit(unit);
 
         setStyle(spinnerView);
     }
@@ -122,44 +169,43 @@ public class CalendarView extends LinearLayout {
     private void setListener() {
         mYearSpinnerView.setOnDataSelectedListener(new SpinnerView.OnDataSelectedListener() {
             @Override
-            public void onSelected(String data) {
-
+            public void onSelected(int data) {
+                mSelectYear = data;
             }
         });
         mMonthSpinnerView.setOnDataSelectedListener(new SpinnerView.OnDataSelectedListener() {
             @Override
-            public void onSelected(String data) {
-
+            public void onSelected(int data) {
+                mSelectMonth = data;
             }
         });
-        mMonthSpinnerView.setOnDataSelectedListener(new SpinnerView.OnDataSelectedListener() {
+        mDaySpinnerView.setOnDataSelectedListener(new SpinnerView.OnDataSelectedListener() {
             @Override
-            public void onSelected(String data) {
-
+            public void onSelected(int data) {
+                mSelectDay = data;
             }
         });
     }
 
     public void setDate(String date) {
         String[] dateArray = date.split("-");
-        int year = 0, month = 0, day = 0;
         switch (dateArray.length) {
             case 3:
-                year = Integer.valueOf(dateArray[0]);
-                month = Integer.valueOf(dateArray[1]);
-                day = Integer.valueOf(dateArray[2]);
+                mSelectYear = Integer.valueOf(dateArray[0]);
+                mSelectMonth = Integer.valueOf(dateArray[1]);
+                mSelectDay = Integer.valueOf(dateArray[2]);
                 break;
             case 2:
-                year = Integer.valueOf(dateArray[0]);
-                month = Integer.valueOf(dateArray[1]);
+                mSelectYear = Integer.valueOf(dateArray[0]);
+                mSelectMonth = Integer.valueOf(dateArray[1]);
                  break;
             case 1:
-                year = Integer.valueOf(dateArray[0]);
+                mSelectDay = Integer.valueOf(dateArray[0]);
                 break;
         }
-        mYearSpinnerView.setCurrentData(year + "年");
-        mMonthSpinnerView.setCurrentData((month > 9 ? month : "0" + month) + "月");
-        mDaySpinnerView.setCurrentData((day > 9 ? day : "0" + day) + "日");
+        mYearSpinnerView.setCurrentData(mSelectYear + "年");
+        mMonthSpinnerView.setCurrentData((mSelectMonth > 9 ? mSelectMonth : "0" + mSelectMonth) + "月");
+        mDaySpinnerView.setCurrentData((mSelectDay > 9 ? mSelectDay : "0" + mSelectDay) + "日");
     }
 
     private List<String> getYearList() {
@@ -187,7 +233,7 @@ public class CalendarView extends LinearLayout {
     }
 
     public interface OnDateSelectedListener {
-        void onDateSelected();
+        void onDateSelected(int year, int month, int day);
     }
 
 }

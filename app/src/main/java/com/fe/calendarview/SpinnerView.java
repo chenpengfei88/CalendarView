@@ -9,6 +9,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Rect;
 import android.os.Build;
+import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
@@ -103,7 +104,7 @@ public class SpinnerView extends View {
     /**
      *  padding top bottom
      */
-    private int mPaddingTopBottom = 40;
+    private int mPaddingTopBottom = 36;
 
     /**
      *  padding left right
@@ -159,6 +160,16 @@ public class SpinnerView extends View {
      *  绘制选中文本的index
      */
     private int mDrawSelectedTextIndex;
+
+    /**
+     *  单位
+     */
+    private String mUnit;
+
+    /**
+     *  当前选中的数据
+     */
+    private String mSelectedData;
 
     private VelocityTracker mVTracker;
 
@@ -227,6 +238,10 @@ public class SpinnerView extends View {
         mOnDataSelectedListener = onDataSelectedListener;
     }
 
+    public void setUnit(String unit) {
+        mUnit = unit;
+    }
+
     private void init(Context context) {
         mTextPaint = new Paint();
         initPaintStyle(mTextPaint);
@@ -280,6 +295,7 @@ public class SpinnerView extends View {
 
     public void setCurrentData(String data) {
         if(mAllDataList.contains(data)) {
+            mSelectedData = data;
             int centerIndex = mAllDataList.indexOf(data);
             for(int i = centerIndex, total = (mVisibleItemCount / 2) + 1; total >= 0; i++, total--) {
                 if(i >= mAllDataList.size()) {
@@ -465,12 +481,18 @@ public class SpinnerView extends View {
                         mDrawSelectedTextIndex = mSelectedTextIndex + 1;
                     }
                 }
+                if(lapse == 1 && mOnDataSelectedListener != null && mVisibleDataList != null && mVisibleDataList.size() > mDrawSelectedTextIndex && !TextUtils.isEmpty(mUnit)) {
+                    mSelectedData = mVisibleDataList.get(mDrawSelectedTextIndex);
+                    if(mSelectedData.contains(mUnit)) {
+                        mOnDataSelectedListener.onSelected(Integer.valueOf(mSelectedData.replaceAll(mUnit, "")));
+                    }
+                }
                 invalidate();
             }
         });
     }
 
     public interface OnDataSelectedListener {
-        void onSelected(String data);
+        void onSelected(int data);
     }
 }
