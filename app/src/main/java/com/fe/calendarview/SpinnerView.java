@@ -1,7 +1,5 @@
 package com.fe.calendarview;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.annotation.TargetApi;
 import android.content.Context;
@@ -17,7 +15,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.Scroller;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -109,7 +106,7 @@ public class SpinnerView extends View {
     /**
      *  padding left right
      */
-    private int mPaddingLeftRight = 60;
+    private int mPaddingLeftRight = 80;
 
     /**
      *  文本颜色
@@ -170,6 +167,8 @@ public class SpinnerView extends View {
      *  当前选中的数据
      */
     private String mSelectedData;
+
+    private float lapse;
 
     private VelocityTracker mVTracker;
 
@@ -253,9 +252,7 @@ public class SpinnerView extends View {
         initPaintStyle(mSelectedLinePaint);
 
         mScroller = new Scroller(context);
-
         mDataCount = mVisibleItemCount + 2;
-        mSelectedTextIndex = mDrawSelectedTextIndex = mDataCount / 2;
     }
 
     private void initPaintStyle(Paint paint) {
@@ -296,6 +293,7 @@ public class SpinnerView extends View {
     public void setCurrentData(String data) {
         if(mAllDataList.contains(data)) {
             mSelectedData = data;
+            mVisibleDataList.clear();
             int centerIndex = mAllDataList.indexOf(data);
             for(int i = centerIndex, total = (mVisibleItemCount / 2) + 1; total >= 0; i++, total--) {
                 if(i >= mAllDataList.size()) {
@@ -314,8 +312,10 @@ public class SpinnerView extends View {
                 String vdata = mVisibleDataList.get(0);
                 mTextPaint.getTextBounds(vdata, 0, vdata.length(), mRect);
             }
+            mMoveY = mInitY = 0;
+            mSelectedTextIndex = mDrawSelectedTextIndex = mDataCount / 2;
+            invalidate();
         }
-        requestLayout();
     }
 
     @Override
@@ -381,6 +381,7 @@ public class SpinnerView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if(mIsAnimation || mFling) return true;
         if(mIsReset) {
             mInitY = event.getY();
             mIsReset = false;
@@ -390,15 +391,13 @@ public class SpinnerView extends View {
     }
 
     private void eventDeal(MotionEvent event) {
+        if(mVTracker == null)
+            mVTracker = VelocityTracker.obtain();
         switch (event.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 mInitY = event.getY();
                 mFling = false;
-                mIsEnd = false;
-                mIsAnimation = false;
                 mUpScrollY = 0;
-                if(mVTracker == null)
-                    mVTracker = VelocityTracker.obtain();
                 break;
             case MotionEvent.ACTION_MOVE:
                 mVTracker.addMovement(event);
@@ -406,6 +405,7 @@ public class SpinnerView extends View {
                 if(mMoveY == mInitY) return;
                 invalidate();
                 break;
+            case MotionEvent.ACTION_CANCEL:
             case MotionEvent.ACTION_UP:
                 mVTracker.computeCurrentVelocity(1000);
                 mFling = true;
@@ -417,7 +417,10 @@ public class SpinnerView extends View {
 
     @Override
     public void computeScroll() {
-        if(mIsAnimation) return;
+        if(mIsAnimation) {
+            if(lapse == 1) mIsAnimation = false;
+            return;
+        }
         if(mFling) {
             if(mScroller.computeScrollOffset()) {
                 int currY = mScroller.getCurrY();
@@ -425,7 +428,7 @@ public class SpinnerView extends View {
                 mMoveY = mMoveY + offsetY;
                 if(mIsReset) {
                     mIsReset = false;
-                    mInitY = mMoveY;
+                    mInitY = mMoveY - 0.3f;
                 }
                 mUpScrollY = currY;
                 calculationOffset();
@@ -457,13 +460,13 @@ public class SpinnerView extends View {
     }
 
     private void selectedAnimation(final float start, final int end, final boolean isDown) {
-        ValueAnimator vAnimator = ValueAnimator.ofFloat(0,1);
-        vAnimator.setDuration(300);
+        ValueAnimator vAnimator = ValueAnimator.ofFloat(0, 1);
+        vAnimator.setDuration(320);
         vAnimator.start();
         vAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
             public void onAnimationUpdate(ValueAnimator animation) {
-                float lapse = (float) animation.getAnimatedValue();
+                lapse = (float) animation.getAnimatedValue();
                 if(isDown) {
                     if(end == 0) {
                         mSlideOffset = start - start * lapse;
@@ -485,11 +488,20 @@ public class SpinnerView extends View {
                     mSelectedData = mVisibleDataList.get(mDrawSelectedTextIndex);
                     if(mSelectedData.contains(mUnit)) {
                         mOnDataSelectedListener.onSelected(Integer.valueOf(mSelectedData.replaceAll(mUnit, "")));
+                        recycleVtracker();
+                        mIsEnd = false;
                     }
                 }
                 invalidate();
             }
         });
+    }
+
+    public void recycleVtracker() {
+        if(mVTracker != null) {
+            mVTracker.recycle();
+            mVTracker = null;
+        }
     }
 
     public interface OnDataSelectedListener {

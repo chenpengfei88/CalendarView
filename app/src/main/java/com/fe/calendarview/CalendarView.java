@@ -11,8 +11,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -115,7 +118,7 @@ public class CalendarView extends LinearLayout {
         tvSure.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
         tvSure.setGravity(Gravity.CENTER_HORIZONTAL);
         tvSure.setTextSize(16);
-        tvSure.setPadding(0, 22, 0, 22);
+        tvSure.setPadding(0, 25, 0, 25);
         tvSure.setText("确定");
         addView(tvSure);
         tvSure.setOnClickListener(new OnClickListener() {
@@ -135,7 +138,7 @@ public class CalendarView extends LinearLayout {
         addViewData(mMonthSpinnerView, lp, getMonthList(), "月");
 
         mDaySpinnerView = new SpinnerView(context);
-        addViewData(mDaySpinnerView, lp, getDayList(1), "日");
+        addViewData(mDaySpinnerView, lp, new ArrayList<String>(), "日");
 
         setListener();
     }
@@ -171,12 +174,14 @@ public class CalendarView extends LinearLayout {
             @Override
             public void onSelected(int data) {
                 mSelectYear = data;
+                setDayAllDataAndCurrentData();
             }
         });
         mMonthSpinnerView.setOnDataSelectedListener(new SpinnerView.OnDataSelectedListener() {
             @Override
             public void onSelected(int data) {
                 mSelectMonth = data;
+                setDayAllDataAndCurrentData();
             }
         });
         mDaySpinnerView.setOnDataSelectedListener(new SpinnerView.OnDataSelectedListener() {
@@ -205,7 +210,22 @@ public class CalendarView extends LinearLayout {
         }
         mYearSpinnerView.setCurrentData(mSelectYear + "年");
         mMonthSpinnerView.setCurrentData((mSelectMonth > 9 ? mSelectMonth : "0" + mSelectMonth) + "月");
+        setDayAllDataAndCurrentData();
+    }
+
+    private void setDayAllDataAndCurrentData() {
+        List<String> dayList = getDayList(mSelectYear + "-" + (mSelectMonth > 9 ? mSelectMonth : "0" + mSelectMonth));
+        mDaySpinnerView.setAllDataList(dayList);
+        checkDayIsExist(dayList);
         mDaySpinnerView.setCurrentData((mSelectDay > 9 ? mSelectDay : "0" + mSelectDay) + "日");
+    }
+
+    private void checkDayIsExist(List<String> dayList) {
+        String selectDayStr = (mSelectDay > 9 ? mSelectDay : "0" + mSelectDay) + "日";
+        if(!dayList.contains(selectDayStr)) {
+            mSelectDay--;
+            checkDayIsExist(dayList);
+        }
     }
 
     private List<String> getYearList() {
@@ -224,12 +244,25 @@ public class CalendarView extends LinearLayout {
         return monthList;
     }
 
-    private List<String> getDayList(int month) {
+    private List<String> getDayList(String yearMonth) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(getDate(yearMonth, "yyyy-MM"));
+        int monthMaxDay = cal.getActualMaximum(Calendar.DAY_OF_MONTH);
         List<String> dayList = new ArrayList<>();
-        for(int i = 1; i <= 30; i++) {
+        for(int i = 1; i <= monthMaxDay; i++) {
             dayList.add((i > 9 ? i : "0" + i) + "日");
         }
         return dayList;
+    }
+
+    private Date getDate(String dateStr, String datePattern){
+        SimpleDateFormat sdf = new SimpleDateFormat(datePattern);
+        try {
+            return sdf.parse(dateStr);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
     public interface OnDateSelectedListener {

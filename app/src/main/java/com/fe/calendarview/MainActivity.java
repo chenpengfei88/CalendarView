@@ -13,7 +13,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         calendarView = (CalendarView) findViewById(R.id.calendarview);
-        calendarView.setDate("2016-12-05");
+        calendarView.setDate("2016-12-31");
         calendarView.setOnDateSelectedListener(new CalendarView.OnDateSelectedListener() {
             @Override
             public void onDateSelected(int year, int month, int day) {
